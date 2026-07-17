@@ -1,4 +1,12 @@
 {
-  "images": [],
+  "images": [
+    {
+      "slug": "beverly-station-sign",
+      "path": "i/beverly-station-sign.png",
+      "w": 96,
+      "h": 40,
+      "updated": "2026-07-17"
+    }
+  ],
   "ads": []
 }
