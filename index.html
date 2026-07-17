@@ -16,6 +16,14 @@
       --border: #333; --accent: #6ea8ff; --danger: #ff7a7a; --thumb-bg: #262626;
     }
   }
+  :root[data-theme="light"] {
+    --bg: #fafafa; --fg: #1a1a1a; --muted: #666; --card: #fff;
+    --border: #ddd; --accent: #1d5fbf; --danger: #b32020; --thumb-bg: #eee;
+  }
+  :root[data-theme="dark"] {
+    --bg: #141414; --fg: #eaeaea; --muted: #999; --card: #1e1e1e;
+    --border: #333; --accent: #6ea8ff; --danger: #ff7a7a; --thumb-bg: #262626;
+  }
   * { box-sizing: border-box; }
   body {
     margin: 0 auto; max-width: 1080px; padding: 24px 16px 80px;
@@ -86,6 +94,7 @@
 <header>
   <h1>🚂 Baker City Assets</h1>
   <p class="sub">Image hosting for the Baker City train server</p>
+  <button id="themeBtn" title="Toggle dark mode">🌙</button>
   <button id="settingsBtn">Settings</button>
 </header>
 
@@ -459,6 +468,22 @@ function render() {
 
 let pendingReplace = null;
 let pendingKind = "images";
+
+function effectiveTheme() {
+  return localStorage.getItem("bca-theme") ||
+    (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+}
+function applyTheme() {
+  const saved = localStorage.getItem("bca-theme");
+  if (saved) document.documentElement.dataset.theme = saved;
+  else delete document.documentElement.dataset.theme;
+  $("#themeBtn").textContent = effectiveTheme() === "dark" ? "☀️" : "🌙";
+}
+$("#themeBtn").onclick = () => {
+  localStorage.setItem("bca-theme", effectiveTheme() === "dark" ? "light" : "dark");
+  applyTheme();
+};
+applyTheme();
 
 $("#settingsBtn").onclick = () => { $("#settings").hidden = !$("#settings").hidden; };
 $("#cfgOwner").value = cfg.owner || "";
