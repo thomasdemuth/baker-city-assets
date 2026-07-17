@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baker City Assets</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚂</text></svg>">
+<style>
+  :root {
+    --bg: #fafafa; --fg: #1a1a1a; --muted: #666; --card: #fff;
+    --border: #ddd; --accent: #1d5fbf; --danger: #b32020; --thumb-bg: #eee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141414; --fg: #eaeaea; --muted: #999; --card: #1e1e1e;
+      --border: #333; --accent: #6ea8ff; --danger: #ff7a7a; --thumb-bg: #262626;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto; max-width: 1080px; padding: 24px 16px 80px;
+    background: var(--bg); color: var(--fg);
+    font: 15px/1.5 system-ui, -apple-system, sans-serif;
+  }
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0; }
+  h2 { font-size: 17px; margin: 36px 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  .sub { color: var(--muted); margin: 0; flex: 1; }
+  button, select, input[type=text], input[type=password] {
+    font: inherit; color: var(--fg); background: var(--card);
+    border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.danger:hover { border-color: var(--danger); color: var(--danger); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  #settings {
+    margin-top: 16px; padding: 14px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 8px;
+  }
+  #settings label { display: block; margin: 8px 0 2px; font-size: 13px; color: var(--muted); }
+  #settings input { width: 100%; max-width: 480px; }
+  #settings .hint { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  #settings .hint a { color: var(--accent); }
+  .drop {
+    margin: 10px 0; padding: 18px; text-align: center; color: var(--muted);
+    border: 2px dashed var(--border); border-radius: 8px; cursor: pointer;
+  }
+  .drop.over { border-color: var(--accent); color: var(--accent); }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px; margin-top: 12px;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .card img { width: 100%; height: 130px; object-fit: contain; background: var(--thumb-bg); display: block; }
+  .card .meta { padding: 8px 10px 0; }
+  .card .meta strong { font-size: 14px; word-break: break-all; }
+  .card .meta .dims { display: block; font-size: 12px; color: var(--muted); }
+  .card .actions { display: flex; gap: 6px; padding: 8px 10px 10px; flex-wrap: wrap; }
+  .card .actions button, .card .actions select { font-size: 12px; padding: 3px 8px; }
+  .bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 12px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; margin: 10px 0;
+  }
+  .bar img { height: 40px; border-radius: 4px; background: var(--thumb-bg); }
+  .bar .picked { font-size: 13px; color: var(--muted); }
+  .count { font-weight: normal; font-size: 13px; color: var(--muted); }
+  #toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--fg); color: var(--bg); padding: 8px 18px; border-radius: 8px;
+    font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .25s;
+    max-width: 90vw;
+  }
+  #toast.show { opacity: 1; }
+  #toast.bad { background: var(--danger); color: #fff; }
+  .empty { color: var(--muted); font-size: 14px; padding: 8px 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🚂 Baker City Assets</h1>
+  <p class="sub">Image hosting for the Baker City train server</p>
+  <button id="settingsBtn">Settings</button>
+</header>
+
+<section id="settings" hidden>
+  <label>GitHub owner</label>
+  <input type="text" id="cfgOwner" placeholder="thomasdemuth">
+  <label>Repository</label>
+  <input type="text" id="cfgRepo" placeholder="baker-city-assets">
+  <label>Fine-grained personal access token</label>
+  <input type="password" id="cfgToken" placeholder="github_pat_…">
+  <p class="hint">
+    <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a token</a>
+    scoped to only this repository with <strong>Contents: Read and write</strong> permission.
+    It is stored only in this browser (localStorage). Without a token the page is a read-only gallery.
+  </p>
+  <p style="margin-bottom:0"><button id="cfgSave" class="primary">Save</button></p>
+</section>
+
+<section>
+  <h2>Images <span class="count" id="imagesCount"></span></h2>
+  <div class="drop" data-kind="images">Drop images here or click to upload</div>
+  <div class="grid" id="imagesGrid"></div>
+</section>
+
+<section>
+  <h2>Advertisements <span class="count" id="adsCount"></span></h2>
+  <div class="bar">
+    <span>Ratio</span>
+    <select id="ratioFilter"><option value="">Any</option></select>
+    <button id="randomBtn" class="primary">Copy random ad link</button>
+    <span class="picked" id="pickedLabel"></span>
+    <img id="pickedThumb" hidden alt="">
+  </div>
+  <div class="drop" data-kind="ads">Drop ad images here or click to upload</div>
+  <div class="grid" id="adsGrid"></div>
+</section>
+
+<input type="file" id="filePick" accept="image/*" multiple hidden>
+<input type="file" id="fileReplace" accept="image/*" hidden>
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+const KINDS = { images: { dir: "i" }, ads: { dir: "ads" } };
+const RATIOS = ["1:1","5:4","4:3","3:2","16:9","2:1","3:1","4:1","4:5","3:4","2:3","9:16","1:2","1:3"];
+const EXT_BY_MIME = { "image/png":"png", "image/jpeg":"jpg", "image/gif":"gif", "image/webp":"webp" };
+const MIME_BY_EXT = { png:"image/png", jpg:"image/jpeg", jpeg:"image/jpeg", gif:"image/gif", webp:"image/webp" };
+
+let manifest = { images: [], ads: [] };
+let cfg = JSON.parse(localStorage.getItem("bca-cfg") || "{}");
+
+// Auto-detect owner/repo when served from GitHub Pages
+if (!cfg.owner && location.hostname.endsWith(".github.io")) {
+  cfg.owner = location.hostname.split(".")[0];
+  cfg.repo = location.pathname.split("/")[1] || "";
+}
+
+const $ = s => document.querySelector(s);
+
+/* ---------- helpers ---------- */
+
+let toastTimer;
+function toast(msg, bad) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.toggle("bad", !!bad);
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 3500);
+}
+
+function siteUrl(path) {
+  return `https://${cfg.owner}.github.io/${cfg.repo}/${path}`;
+}
+
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch { prompt("Copy this URL:", text); }
+}
+
+function slugify(name) {
+  return name.replace(/\.[^.]+$/, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "image";
+}
+
+function extOf(file) {
+  return EXT_BY_MIME[file.type] || file.name.split(".").pop().toLowerCase();
+}
+
+function snapRatio(w, h) {
+  let best = RATIOS[0], bd = Infinity;
+  for (const r of RATIOS) {
+    const [a, b] = r.split(":").map(Number);
+    const d = Math.abs(Math.log(w / h) - Math.log(a / b));
+    if (d < bd) { bd = d; best = r; }
+  }
+  return best;
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result.split(",")[1]);
+    fr.onerror = rej;
+    fr.readAsDataURL(file);
+  });
+}
+
+function imageDims(blob) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => { res({ w: img.naturalWidth, h: img.naturalHeight }); URL.revokeObjectURL(url); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("Not a readable image")); };
+    img.src = url;
+  });
+}
+
+// Re-encode an image to a different format so a replaced file can keep its URL/extension
+function convertTo(blob, ext) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      c.getContext("2d").drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? res(b) : rej(new Error("Conversion failed")), MIME_BY_EXT[ext], 0.92);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("Not a readable image")); };
+    img.src = url;
+  });
+}
+
+/* ---------- GitHub API ---------- */
+
+const api = {
+  base() { return `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/`; },
+  headers() {
+    return { Authorization: `Bearer ${cfg.token}`, Accept: "application/vnd.github+json" };
+  },
+  // Look up a file's sha via its parent directory listing (works for files of any size)
+  async sha(path) {
+    const i = path.lastIndexOf("/");
+    const dir = i === -1 ? "" : path.slice(0, i);
+    const name = i === -1 ? path : path.slice(i + 1);
+    const r = await fetch(this.base() + dir + "?t=" + Date.now(), { headers: this.headers(), cache: "no-store" });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`GitHub API error ${r.status}`);
+    const list = await r.json();
+    const f = Array.isArray(list) ? list.find(x => x.name === name) : null;
+    return f ? f.sha : null;
+  },
+  async put(path, base64, message) {
+    const sha = await this.sha(path);
+    const r = await fetch(this.base() + path, {
+      method: "PUT", headers: this.headers(),
+      body: JSON.stringify({ message, content: base64, ...(sha ? { sha } : {}) })
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(`Save failed (${r.status}): ${err.message || "unknown error"}`);
+    }
+  },
+  async del(path, message) {
+    const sha = await this.sha(path);
+    if (!sha) return;
+    const r = await fetch(this.base() + path, {
+      method: "DELETE", headers: this.headers(),
+      body: JSON.stringify({ message, sha })
+    });
+    if (!r.ok) throw new Error(`Delete failed (${r.status})`);
+  },
+  async raw(path) {
+    const r = await fetch(this.base() + path + "?t=" + Date.now(), {
+      headers: { ...this.headers(), Accept: "application/vnd.github.raw+json" }, cache: "no-store"
+    });
+    return r.ok ? r.text() : null;
+  }
+};
+
+async function saveManifest(message) {
+  const json = JSON.stringify(manifest, null, 2);
+  const b64 = btoa(unescape(encodeURIComponent(json)));
+  await api.put("assets.json", b64, message);
+}
+
+async function loadManifest() {
+  try {
+    let text = null;
+    if (cfg.token && cfg.owner) text = await api.raw("assets.json"); // freshest copy
+    if (text === null) {
+      const r = await fetch("assets.json?t=" + Date.now(), { cache: "no-store" });
+      if (r.ok) text = await r.text();
+    }
+    if (text) manifest = Object.assign({ images: [], ads: [] }, JSON.parse(text));
+  } catch (e) { console.warn("manifest load:", e); }
+  render();
+}
+
+/* ---------- uploads ---------- */
+
+function requireToken() {
+  if (cfg.token && cfg.owner && cfg.repo) return true;
+  $("#settings").hidden = false;
+  toast("Set owner, repo, and token in Settings first", true);
+  return false;
+}
+
+async function uploadFiles(kind, files, forceSlug) {
+  if (!requireToken()) return;
+  for (const file of files) {
+    try {
+      if (!file.type.startsWith("image/")) { toast(`${file.name}: not an image`, true); continue; }
+      const slug = forceSlug || slugify(file.name);
+      const existing = manifest[kind].find(e => e.slug === slug);
+      let blob = file, path;
+
+      if (existing) {
+        const curExt = existing.path.split(".").pop();
+        const newExt = extOf(file);
+        if (curExt !== newExt) {
+          if (curExt === "gif" || newExt === "gif") {
+            toast(`"${slug}" is .${curExt} — upload the same format, or delete it first`, true);
+            continue;
+          }
+          blob = await convertTo(file, curExt); // keep extension so the URL never changes
+        }
+        if (!forceSlug && !confirm(`"${slug}" already exists. Replace it? (URL stays the same)`)) continue;
+        path = existing.path;
+      } else {
+        path = `${KINDS[kind].dir}/${slug}.${extOf(file)}`;
+      }
+
+      toast(`Uploading ${slug}…`);
+      const dims = await imageDims(blob);
+      await api.put(path, await fileToBase64(blob), `${existing ? "Update" : "Add"} ${path}`);
+
+      const entry = existing || { slug, path };
+      entry.w = dims.w; entry.h = dims.h;
+      entry.updated = new Date().toISOString().slice(0, 10);
+      if (kind === "ads" && !existing) entry.ratio = snapRatio(dims.w, dims.h);
+      if (kind === "ads" && existing) entry.ratio = entry.ratio || snapRatio(dims.w, dims.h);
+      if (!existing) manifest[kind].push(entry);
+
+      await saveManifest(`${existing ? "Update" : "Add"} ${slug}`);
+      render();
+      toast(`${existing ? "Updated" : "Uploaded"} ${slug} — live at the same URL in ~1 min`);
+    } catch (e) {
+      toast(e.message, true);
+    }
+  }
+}
+
+async function deleteEntry(kind, slug) {
+  if (!requireToken()) return;
+  const entry = manifest[kind].find(e => e.slug === slug);
+  if (!entry || !confirm(`Delete "${slug}"? Its URL will stop working.`)) return;
+  try {
+    await api.del(entry.path, `Delete ${entry.path}`);
+    manifest[kind] = manifest[kind].filter(e => e !== entry);
+    await saveManifest(`Delete ${slug}`);
+    render();
+    toast(`Deleted ${slug}`);
+  } catch (e) { toast(e.message, true); }
+}
+
+/* ---------- rendering ---------- */
+
+function card(kind, entry) {
+  const div = document.createElement("div");
+  div.className = "card";
+
+  const img = document.createElement("img");
+  img.loading = "lazy";
+  img.src = `${entry.path}?v=${entry.updated || ""}`;
+  img.alt = entry.slug;
+  div.appendChild(img);
+
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  const name = document.createElement("strong");
+  name.textContent = entry.slug;
+  const dims = document.createElement("span");
+  dims.className = "dims";
+  dims.textContent = `${entry.w}×${entry.h}${entry.ratio ? " · " + entry.ratio : ""} · ${entry.updated || ""}`;
+  meta.append(name, dims);
+  div.appendChild(meta);
+
+  const actions = document.createElement("div");
+  actions.className = "actions";
+
+  const copyBtn = document.createElement("button");
+  copyBtn.textContent = "Copy link";
+  copyBtn.onclick = async () => { await copyText(siteUrl(entry.path)); toast("Link copied"); };
+
+  const replaceBtn = document.createElement("button");
+  replaceBtn.textContent = "Replace";
+  replaceBtn.onclick = () => {
+    pendingReplace = { kind, slug: entry.slug };
+    $("#fileReplace").click();
+  };
+
+  const delBtn = document.createElement("button");
+  delBtn.className = "danger";
+  delBtn.textContent = "Delete";
+  delBtn.onclick = () => deleteEntry(kind, entry.slug);
+
+  actions.append(copyBtn, replaceBtn, delBtn);
+
+  if (kind === "ads") {
+    const sel = document.createElement("select");
+    sel.title = "Aspect ratio tag";
+    for (const r of RATIOS) {
+      const o = document.createElement("option");
+      o.value = o.textContent = r;
+      sel.appendChild(o);
+    }
+    sel.value = entry.ratio || snapRatio(entry.w, entry.h);
+    sel.onchange = async () => {
+      if (!requireToken()) { sel.value = entry.ratio; return; }
+      entry.ratio = sel.value;
+      try { await saveManifest(`Tag ${entry.slug} as ${sel.value}`); render(); toast("Ratio updated"); }
+      catch (e) { toast(e.message, true); }
+    };
+    actions.appendChild(sel);
+  }
+
+  div.appendChild(actions);
+  return div;
+}
+
+function render() {
+  for (const kind of ["images", "ads"]) {
+    const grid = $(`#${kind}Grid`);
+    grid.replaceChildren();
+    const list = [...manifest[kind]].sort((a, b) => a.slug.localeCompare(b.slug));
+    for (const e of list) grid.appendChild(card(kind, e));
+    if (!list.length) {
+      const p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "Nothing here yet.";
+      grid.appendChild(p);
+    }
+    $(`#${kind}Count`).textContent = list.length ? `(${list.length})` : "";
+  }
+  // ratio filter options: only ratios that exist in the ad pool
+  const sel = $("#ratioFilter");
+  const prev = sel.value;
+  sel.replaceChildren(new Option("Any", ""));
+  const present = [...new Set(manifest.ads.map(e => e.ratio).filter(Boolean))];
+  present.sort((a, b) => RATIOS.indexOf(a) - RATIOS.indexOf(b));
+  for (const r of present) sel.appendChild(new Option(r, r));
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
+/* ---------- wiring ---------- */
+
+let pendingReplace = null;
+let pendingKind = "images";
+
+$("#settingsBtn").onclick = () => { $("#settings").hidden = !$("#settings").hidden; };
+$("#cfgOwner").value = cfg.owner || "";
+$("#cfgRepo").value = cfg.repo || "";
+$("#cfgToken").value = cfg.token || "";
+$("#cfgSave").onclick = () => {
+  cfg.owner = $("#cfgOwner").value.trim();
+  cfg.repo = $("#cfgRepo").value.trim();
+  cfg.token = $("#cfgToken").value.trim();
+  localStorage.setItem("bca-cfg", JSON.stringify(cfg));
+  $("#settings").hidden = true;
+  toast("Settings saved");
+  loadManifest();
+};
+
+for (const drop of document.querySelectorAll(".drop")) {
+  const kind = drop.dataset.kind;
+  drop.onclick = () => { pendingKind = kind; $("#filePick").click(); };
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+  drop.ondragleave = () => drop.classList.remove("over");
+  drop.ondrop = e => {
+    e.preventDefault();
+    drop.classList.remove("over");
+    uploadFiles(kind, [...e.dataTransfer.files]);
+  };
+}
+
+$("#filePick").onchange = e => {
+  uploadFiles(pendingKind, [...e.target.files]);
+  e.target.value = "";
+};
+
+$("#fileReplace").onchange = e => {
+  if (pendingReplace && e.target.files.length) {
+    uploadFiles(pendingReplace.kind, [e.target.files[0]], pendingReplace.slug);
+  }
+  pendingReplace = null;
+  e.target.value = "";
+};
+
+$("#randomBtn").onclick = async () => {
+  const ratio = $("#ratioFilter").value;
+  const pool = manifest.ads.filter(e => !ratio || e.ratio === ratio);
+  if (!pool.length) { toast("No ads match that ratio", true); return; }
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  await copyText(siteUrl(pick.path));
+  $("#pickedLabel").textContent = `Copied: ${pick.slug} (${pick.ratio})`;
+  const thumb = $("#pickedThumb");
+  thumb.src = `${pick.path}?v=${pick.updated || ""}`;
+  thumb.hidden = false;
+  toast("Random ad link copied");
+};
+
+loadManifest();
+</script>
+</body>
+</html>
