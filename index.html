@@ -163,8 +163,16 @@ function siteUrl(path) {
 }
 
 async function copyText(text) {
-  try { await navigator.clipboard.writeText(text); }
-  catch { prompt("Copy this URL:", text); }
+  try {
+    await Promise.race([
+      navigator.clipboard.writeText(text),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("clipboard timeout")), 1500))
+    ]);
+    return true;
+  } catch {
+    try { prompt("Copy this URL:", text); } catch {}
+    return false;
+  }
 }
 
 function slugify(name) {
@@ -382,7 +390,10 @@ function card(kind, entry) {
 
   const copyBtn = document.createElement("button");
   copyBtn.textContent = "Copy link";
-  copyBtn.onclick = async () => { await copyText(siteUrl(entry.path)); toast("Link copied"); };
+  copyBtn.onclick = async () => {
+    const ok = await copyText(siteUrl(entry.path));
+    toast(ok ? "Link copied" : "Clipboard blocked — copy the URL from the dialog", !ok);
+  };
 
   const replaceBtn = document.createElement("button");
   replaceBtn.textContent = "Replace";
@@ -493,12 +504,12 @@ $("#randomBtn").onclick = async () => {
   const pool = manifest.ads.filter(e => !ratio || e.ratio === ratio);
   if (!pool.length) { toast("No ads match that ratio", true); return; }
   const pick = pool[Math.floor(Math.random() * pool.length)];
-  await copyText(siteUrl(pick.path));
-  $("#pickedLabel").textContent = `Copied: ${pick.slug} (${pick.ratio})`;
+  $("#pickedLabel").textContent = `${pick.slug} (${pick.ratio})`;
   const thumb = $("#pickedThumb");
   thumb.src = `${pick.path}?v=${pick.updated || ""}`;
   thumb.hidden = false;
-  toast("Random ad link copied");
+  const ok = await copyText(siteUrl(pick.path));
+  toast(ok ? "Random ad link copied" : "Clipboard blocked — copy the URL from the dialog", !ok);
 };
 
 loadManifest();
