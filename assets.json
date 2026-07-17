@@ -8,5 +8,14 @@
       "updated": "2026-07-17"
     }
   ],
-  "ads": []
+  "ads": [
+    {
+      "slug": "surfing",
+      "path": "ads/surfing.png",
+      "w": 512,
+      "h": 281,
+      "updated": "2026-07-17",
+      "ratio": "16:9"
+    }
+  ]
 }
