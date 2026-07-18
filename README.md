@@ -10,7 +10,7 @@ Image hosting for the Baker City modded Minecraft train server, served by GitHub
   repo through the GitHub API, so there is no server and no build step.
 - `assets.json` is the database: every image's slug, path, dimensions, ratio tag, and
   last-updated date.
-- General images live in `i/`, advertisements in `ads/`.
+- General images live in `i/`, artwork in `art/`, advertisements in `ads/`.
 - URLs are stable: replacing an image commits new bytes to the **same path**, so anything
   in the Minecraft world that points at the URL keeps working.
 
@@ -32,6 +32,9 @@ Image hosting for the Baker City modded Minecraft train server, served by GitHub
   it is converted so the extension (and URL) never changes.
 - **Ads:** each ad is auto-tagged with its nearest aspect ratio (overridable per card).
   Pick a ratio and hit **Copy random ad link** to get a random matching ad's URL.
+- **Campaigns:** group ads via the campaign dropdown on each ad card ("New campaign…"
+  to create one). Groups are collapsible (state remembered per browser), and the
+  random picker can be filtered to a single campaign.
 
 ## Notes / limitations
 

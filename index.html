@@ -78,6 +78,14 @@
   .bar img { height: 40px; border-radius: 4px; background: var(--thumb-bg); }
   .bar .picked { font-size: 13px; color: var(--muted); }
   .count { font-weight: normal; font-size: 13px; color: var(--muted); }
+  details.campaign {
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--card); margin: 12px 0;
+  }
+  details.campaign summary {
+    cursor: pointer; padding: 10px 14px; font-weight: 600; user-select: none;
+  }
+  details.campaign .grid { padding: 0 12px 12px; margin-top: 0; }
   #toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
     background: var(--fg); color: var(--bg); padding: 8px 18px; border-radius: 8px;
@@ -120,16 +128,24 @@
 </section>
 
 <section>
+  <h2>Artwork <span class="count" id="artCount"></span></h2>
+  <div class="drop" data-kind="art">Drop artwork here or click to upload</div>
+  <div class="grid" id="artGrid"></div>
+</section>
+
+<section>
   <h2>Advertisements <span class="count" id="adsCount"></span></h2>
   <div class="bar">
     <span>Ratio</span>
     <select id="ratioFilter"><option value="">Any</option></select>
+    <span>Campaign</span>
+    <select id="campaignFilter"><option value="">All</option></select>
     <button id="randomBtn" class="primary">Copy random ad link</button>
     <span class="picked" id="pickedLabel"></span>
     <img id="pickedThumb" hidden alt="">
   </div>
   <div class="drop" data-kind="ads">Drop ad images here or click to upload</div>
-  <div class="grid" id="adsGrid"></div>
+  <div id="adsGrid"></div>
 </section>
 
 <input type="file" id="filePick" accept="image/*" multiple hidden>
@@ -139,12 +155,12 @@
 <script>
 "use strict";
 
-const KINDS = { images: { dir: "i" }, ads: { dir: "ads" } };
+const KINDS = { images: { dir: "i" }, art: { dir: "art" }, ads: { dir: "ads" } };
 const RATIOS = ["1:1","5:4","4:3","3:2","16:9","2:1","3:1","4:1","4:5","3:4","2:3","9:16","1:2","1:3"];
 const EXT_BY_MIME = { "image/png":"png", "image/jpeg":"jpg", "image/gif":"gif", "image/webp":"webp" };
 const MIME_BY_EXT = { png:"image/png", jpg:"image/jpeg", jpeg:"image/jpeg", gif:"image/gif", webp:"image/webp" };
 
-let manifest = { images: [], ads: [] };
+let manifest = { images: [], art: [], ads: [] };
 let cfg = JSON.parse(localStorage.getItem("bca-cfg") || "{}");
 
 // Auto-detect owner/repo when served from GitHub Pages
@@ -300,7 +316,7 @@ async function loadManifest() {
       const r = await fetch("assets.json?t=" + Date.now(), { cache: "no-store" });
       if (r.ok) text = await r.text();
     }
-    if (text) manifest = Object.assign({ images: [], ads: [] }, JSON.parse(text));
+    if (text) manifest = Object.assign({ images: [], art: [], ads: [] }, JSON.parse(text));
   } catch (e) { console.warn("manifest load:", e); }
   render();
 }
@@ -434,26 +450,88 @@ function card(kind, entry) {
       catch (e) { toast(e.message, true); }
     };
     actions.appendChild(sel);
+
+    const camp = document.createElement("select");
+    camp.title = "Campaign";
+    camp.appendChild(new Option("No campaign", ""));
+    for (const n of campaignNames()) camp.appendChild(new Option(n, n));
+    camp.appendChild(new Option("New campaign…", "__new"));
+    camp.value = entry.campaign || "";
+    camp.onchange = async () => {
+      if (!requireToken()) { camp.value = entry.campaign || ""; return; }
+      let v = camp.value;
+      if (v === "__new") {
+        v = (prompt("New campaign name:") || "").trim();
+        if (!v) { camp.value = entry.campaign || ""; return; }
+      }
+      if (v) entry.campaign = v; else delete entry.campaign;
+      try {
+        await saveManifest(`Set campaign of ${entry.slug} to ${v || "none"}`);
+        render();
+        toast("Campaign updated");
+      } catch (e) { toast(e.message, true); render(); }
+    };
+    actions.appendChild(camp);
   }
 
   div.appendChild(actions);
   return div;
 }
 
+function campaignNames() {
+  return [...new Set(manifest.ads.map(e => e.campaign).filter(Boolean))].sort();
+}
+
+let closedCampaigns = new Set(JSON.parse(localStorage.getItem("bca-closed") || "[]"));
+
+function emptyNote(el) {
+  const p = document.createElement("p");
+  p.className = "empty";
+  p.textContent = "Nothing here yet.";
+  el.appendChild(p);
+}
+
 function render() {
-  for (const kind of ["images", "ads"]) {
+  for (const kind of ["images", "art"]) {
     const grid = $(`#${kind}Grid`);
     grid.replaceChildren();
     const list = [...manifest[kind]].sort((a, b) => a.slug.localeCompare(b.slug));
     for (const e of list) grid.appendChild(card(kind, e));
-    if (!list.length) {
-      const p = document.createElement("p");
-      p.className = "empty";
-      p.textContent = "Nothing here yet.";
-      grid.appendChild(p);
-    }
+    if (!list.length) emptyNote(grid);
     $(`#${kind}Count`).textContent = list.length ? `(${list.length})` : "";
   }
+
+  // ads grouped into collapsible campaigns; untagged ads in a "No campaign" group
+  const wrap = $("#adsGrid");
+  wrap.replaceChildren();
+  const ads = [...manifest.ads].sort((a, b) => a.slug.localeCompare(b.slug));
+  $("#adsCount").textContent = ads.length ? `(${ads.length})` : "";
+  if (!ads.length) emptyNote(wrap);
+  const groups = campaignNames().map(name => [name, ads.filter(e => e.campaign === name)]);
+  const loose = ads.filter(e => !e.campaign);
+  if (loose.length) groups.push(["No campaign", loose]);
+  for (const [name, list] of groups) {
+    const det = document.createElement("details");
+    det.className = "campaign";
+    det.open = !closedCampaigns.has(name);
+    const sum = document.createElement("summary");
+    sum.textContent = `${name} `;
+    const c = document.createElement("span");
+    c.className = "count";
+    c.textContent = `(${list.length})`;
+    sum.appendChild(c);
+    det.appendChild(sum);
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    for (const e of list) grid.appendChild(card("ads", e));
+    det.appendChild(grid);
+    det.addEventListener("toggle", () => {
+      if (det.open) closedCampaigns.delete(name); else closedCampaigns.add(name);
+      localStorage.setItem("bca-closed", JSON.stringify([...closedCampaigns]));
+    });
+    wrap.appendChild(det);
+  }
+
   // ratio filter options: only ratios that exist in the ad pool
   const sel = $("#ratioFilter");
   const prev = sel.value;
@@ -462,6 +540,13 @@ function render() {
   present.sort((a, b) => RATIOS.indexOf(a) - RATIOS.indexOf(b));
   for (const r of present) sel.appendChild(new Option(r, r));
   if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+
+  // campaign filter for the random picker
+  const cf = $("#campaignFilter");
+  const prevC = cf.value;
+  cf.replaceChildren(new Option("All", ""));
+  for (const n of campaignNames()) cf.appendChild(new Option(n, n));
+  if ([...cf.options].some(o => o.value === prevC)) cf.value = prevC;
 }
 
 /* ---------- wiring ---------- */
@@ -526,8 +611,10 @@ $("#fileReplace").onchange = e => {
 
 $("#randomBtn").onclick = async () => {
   const ratio = $("#ratioFilter").value;
-  const pool = manifest.ads.filter(e => !ratio || e.ratio === ratio);
-  if (!pool.length) { toast("No ads match that ratio", true); return; }
+  const campaign = $("#campaignFilter").value;
+  const pool = manifest.ads.filter(e =>
+    (!ratio || e.ratio === ratio) && (!campaign || e.campaign === campaign));
+  if (!pool.length) { toast("No ads match those filters", true); return; }
   const pick = pool[Math.floor(Math.random() * pool.length)];
   $("#pickedLabel").textContent = `${pick.slug} (${pick.ratio})`;
   const thumb = $("#pickedThumb");
