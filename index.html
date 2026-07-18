@@ -165,6 +165,9 @@ const EXT_BY_MIME = { "image/png":"png", "image/jpeg":"jpg", "image/gif":"gif", 
 const MIME_BY_EXT = { png:"image/png", jpg:"image/jpeg", jpeg:"image/jpeg", gif:"image/gif", webp:"image/webp" };
 
 let manifest = { images: [], art: [], ads: [] };
+// object URLs of files uploaded this session, so cards show new bytes
+// immediately instead of waiting out the Pages build + CDN cache
+const localPreviews = new Map();
 let cfg = JSON.parse(localStorage.getItem("bca-cfg") || "{}");
 
 // Auto-detect owner/repo when served from GitHub Pages
@@ -366,6 +369,8 @@ async function uploadFiles(kind, files, forceSlug) {
       const entry = existing || { slug, path };
       entry.w = dims.w; entry.h = dims.h;
       entry.updated = new Date().toISOString().slice(0, 10);
+      entry.v = Date.now();
+      localPreviews.set(`${kind}/${slug}`, URL.createObjectURL(blob));
       if (kind === "ads" && !existing) {
         entry.ratio = snapRatio(dims.w, dims.h);
         const uploadCampaign = $("#uploadCampaign").value;
@@ -376,7 +381,9 @@ async function uploadFiles(kind, files, forceSlug) {
 
       await saveManifest(`${existing ? "Update" : "Add"} ${slug}`);
       render();
-      toast(`${existing ? "Updated" : "Uploaded"} ${slug} — live at the same URL in ~1 min`);
+      toast(existing
+        ? `Updated ${slug} — same URL; the CDN can serve the old image for up to ~10 min`
+        : `Uploaded ${slug} — live in ~1 min`);
     } catch (e) {
       toast(e.message, true);
     }
@@ -404,7 +411,7 @@ function card(kind, entry) {
 
   const img = document.createElement("img");
   img.loading = "lazy";
-  img.src = `${entry.path}?v=${entry.updated || ""}`;
+  img.src = localPreviews.get(`${kind}/${entry.slug}`) || `${entry.path}?v=${entry.v || entry.updated || ""}`;
   img.alt = entry.slug;
   div.appendChild(img);
 
@@ -648,7 +655,7 @@ $("#randomBtn").onclick = async () => {
   const pick = pool[Math.floor(Math.random() * pool.length)];
   $("#pickedLabel").textContent = `${pick.slug} (${pick.ratio})`;
   const thumb = $("#pickedThumb");
-  thumb.src = `${pick.path}?v=${pick.updated || ""}`;
+  thumb.src = localPreviews.get(`ads/${pick.slug}`) || `${pick.path}?v=${pick.v || pick.updated || ""}`;
   thumb.hidden = false;
   const ok = await copyText(siteUrl(pick.path));
   toast(ok ? "Random ad link copied" : "Clipboard blocked — copy the URL from the dialog", !ok);
