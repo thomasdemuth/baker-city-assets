@@ -32,9 +32,10 @@ Image hosting for the Baker City modded Minecraft train server, served by GitHub
   it is converted so the extension (and URL) never changes.
 - **Ads:** each ad is auto-tagged with its nearest aspect ratio (overridable per card).
   Pick a ratio and hit **Copy random ad link** to get a random matching ad's URL.
-- **Campaigns:** group ads via the campaign dropdown on each ad card ("New campaign…"
-  to create one). Groups are collapsible (state remembered per browser), and the
-  random picker can be filtered to a single campaign.
+- **Campaigns:** group ads via the campaign dropdown on each ad card, or pick an
+  "Upload into" campaign above the ad drop zone to tag new uploads as they land
+  ("New campaign…" creates one in either dropdown). Groups are collapsible (state
+  remembered per browser), and the random picker can be filtered to a single campaign.
 
 ## Notes / limitations
 

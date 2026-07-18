@@ -144,6 +144,10 @@
     <span class="picked" id="pickedLabel"></span>
     <img id="pickedThumb" hidden alt="">
   </div>
+  <div class="bar">
+    <span>Upload into</span>
+    <select id="uploadCampaign"><option value="">No campaign</option></select>
+  </div>
   <div class="drop" data-kind="ads">Drop ad images here or click to upload</div>
   <div id="adsGrid"></div>
 </section>
@@ -362,7 +366,11 @@ async function uploadFiles(kind, files, forceSlug) {
       const entry = existing || { slug, path };
       entry.w = dims.w; entry.h = dims.h;
       entry.updated = new Date().toISOString().slice(0, 10);
-      if (kind === "ads" && !existing) entry.ratio = snapRatio(dims.w, dims.h);
+      if (kind === "ads" && !existing) {
+        entry.ratio = snapRatio(dims.w, dims.h);
+        const uploadCampaign = $("#uploadCampaign").value;
+        if (uploadCampaign && uploadCampaign !== "__new") entry.campaign = uploadCampaign;
+      }
       if (kind === "ads" && existing) entry.ratio = entry.ratio || snapRatio(dims.w, dims.h);
       if (!existing) manifest[kind].push(entry);
 
@@ -478,8 +486,13 @@ function card(kind, entry) {
   return div;
 }
 
+let extraCampaigns = new Set(); // created via "New campaign…" but not yet on any ad
+
 function campaignNames() {
-  return [...new Set(manifest.ads.map(e => e.campaign).filter(Boolean))].sort();
+  return [...new Set([
+    ...manifest.ads.map(e => e.campaign).filter(Boolean),
+    ...extraCampaigns,
+  ])].sort();
 }
 
 let closedCampaigns = new Set(JSON.parse(localStorage.getItem("bca-closed") || "[]"));
@@ -547,6 +560,14 @@ function render() {
   cf.replaceChildren(new Option("All", ""));
   for (const n of campaignNames()) cf.appendChild(new Option(n, n));
   if ([...cf.options].some(o => o.value === prevC)) cf.value = prevC;
+
+  // campaign that new ad uploads are tagged with
+  const uc = $("#uploadCampaign");
+  const prevU = uc.value;
+  uc.replaceChildren(new Option("No campaign", ""));
+  for (const n of campaignNames()) uc.appendChild(new Option(n, n));
+  uc.appendChild(new Option("New campaign…", "__new"));
+  if ([...uc.options].some(o => o.value === prevU)) uc.value = prevU;
 }
 
 /* ---------- wiring ---------- */
@@ -607,6 +628,15 @@ $("#fileReplace").onchange = e => {
   }
   pendingReplace = null;
   e.target.value = "";
+};
+
+$("#uploadCampaign").onchange = () => {
+  if ($("#uploadCampaign").value !== "__new") return;
+  const v = (prompt("New campaign name:") || "").trim();
+  if (!v) { $("#uploadCampaign").value = ""; return; }
+  extraCampaigns.add(v);
+  render(); // rebuild every campaign dropdown so the new name shows up
+  $("#uploadCampaign").value = v;
 };
 
 $("#randomBtn").onclick = async () => {
