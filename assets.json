@@ -554,6 +554,15 @@
       "updated": "2026-07-18",
       "ratio": "5:4",
       "campaign": "Visit Baker City"
+    },
+    {
+      "slug": "hermit-city",
+      "path": "ads/hermit-city.png",
+      "w": 500,
+      "h": 400,
+      "updated": "2026-07-18",
+      "ratio": "5:4",
+      "campaign": "Visit Baker City"
     }
   ]
 }
