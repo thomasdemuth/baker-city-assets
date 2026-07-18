@@ -29,6 +29,7 @@
       "updated": "2026-07-17"
     }
   ],
+  "art": [],
   "ads": [
     {
       "slug": "surfing",
@@ -288,7 +289,8 @@
       "h": 1074,
       "ratio": "3:4",
       "updated": "2026-07-16",
-      "source": "https://commons.wikimedia.org/wiki/File:American_Airlines_To_Washington_Night_and_Day_by_Edward_McKnight_Kauffer_(1948).jpg"
+      "source": "https://commons.wikimedia.org/wiki/File:American_Airlines_To_Washington_Night_and_Day_by_Edward_McKnight_Kauffer_(1948).jpg",
+      "campaign": "American Airlines (70s)"
     },
     {
       "slug": "american-airlines-poster-california-arizona-texas",
